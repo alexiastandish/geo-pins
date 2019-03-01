@@ -8,7 +8,10 @@ import Typography from '@material-ui/core/Typography'
 import Context from '../context'
 import SignOut from '../components/Auth/Signout'
 
+import { unstable_useMediaQuery as useMediaQuery } from '@material-ui/core/useMediaQuery'
+
 const Header = ({ classes }) => {
+  const mobile = useMediaQuery('(max-width: 650px)')
   const { state } = useContext(Context)
   const { currentUser } = state
   return (
@@ -18,7 +21,13 @@ const Header = ({ classes }) => {
           {/* {title / ogo} */}
           <div className={classes.grow}>
             <MapIcon className={classes.icon} />
-            <Typography component="h1" variant="h6" color="inherit" noWrap>
+            <Typography
+              className={mobile ? classes.mobile : ''}
+              component="h1"
+              variant="h6"
+              color="inherit"
+              noWrap
+            >
               GeoPins
             </Typography>
           </div>
@@ -26,7 +35,12 @@ const Header = ({ classes }) => {
           {currentUser && (
             <div className={classes.grow}>
               <img className={classes.picture} src={currentUser.picture} alt={currentUser.name} />
-              <Typography variant="h5" color="inherit" noWrap>
+              <Typography
+                className={mobile ? classes.mobile : ''}
+                variant="h5"
+                color="inherit"
+                noWrap
+              >
                 {currentUser.name}
               </Typography>
             </div>
