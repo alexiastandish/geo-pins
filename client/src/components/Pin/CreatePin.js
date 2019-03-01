@@ -1,5 +1,6 @@
 import React, { useState, useContext } from 'react'
 import { withStyles } from '@material-ui/core/styles'
+import axios from 'axios'
 import TextField from '@material-ui/core/TextField'
 import Typography from '@material-ui/core/Typography'
 import Button from '@material-ui/core/Button'
@@ -8,14 +9,30 @@ import LandscapeIcon from '@material-ui/icons/LandscapeOutlined'
 import ClearIcon from '@material-ui/icons/Clear'
 import SaveIcon from '@material-ui/icons/SaveTwoTone'
 
+import { CREATE_PIN_MUTATION } from '../../graphql/mutations'
+import { useClient } from '../../client'
+
 import Context from '../../context'
 
 const CreatePin = ({ classes }) => {
-  const { dispatch } = useContext(Context)
-
+  const client = useClient()
+  const { state, dispatch } = useContext(Context)
   const [title, setTitle] = useState('')
   const [image, setImage] = useState('')
   const [content, setContent] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleImageUpload = async () => {
+    const data = new FormData()
+    data.append('file', image)
+    data.append('upload_preset', 'geopins')
+    data.append('cloud_name', 'djsnadzwm')
+    const response = await axios.post(
+      'https://api.cloudinary.com/v1_1/djsnadzwm/image/upload',
+      data
+    )
+    return response.data.url
+  }
 
   const handleDeleteDraft = () => {
     setTitle('')
@@ -23,10 +40,23 @@ const CreatePin = ({ classes }) => {
     setContent('')
     dispatch({ type: 'DELETE_DRAFT' })
   }
-  const handleSumbit = event => {
-    event.preventDefault()
-    console.log('event', title, image, content)
+  const handleSumbit = async event => {
+    try {
+      event.preventDefault()
+      setSubmitting(true)
+
+      const url = await handleImageUpload()
+      const { latitude, longitude } = state.draft
+      const variables = { title, image: url, content, latitude, longitude }
+      const { createPin } = await client.request(CREATE_PIN_MUTATION, variables)
+      dispatch({ type: 'CREATE_PIN', payload: createPin })
+      handleDeleteDraft()
+    } catch (err) {
+      setSubmitting(false)
+      console.error('error creating pin', err)
+    }
   }
+
   return (
     <form className={classes.form}>
       <Typography className={classes.alignCenter} component="h2" color="secondary" variant="h4">
@@ -41,6 +71,7 @@ const CreatePin = ({ classes }) => {
           // value={title}
           onChange={e => setTitle(e.target.value)}
         />
+
         <input
           accept="image/*"
           id="image"
@@ -87,7 +118,7 @@ const CreatePin = ({ classes }) => {
           type="submit"
           variant="contained"
           color="secondary"
-          disabled={!title.trim() || !content.trim() || !image}
+          disabled={!title.trim() || !content.trim() || !image || submitting}
           onClick={handleSumbit}
         >
           <SaveIcon className={classes.rightIcon} />
